@@ -1,7 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
 
 generator client {
   provider = "prisma-client"
@@ -10,4 +6,97 @@ generator client {
 
 datasource db {
   provider = "mysql"
+}
+
+enum UserStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum CompanyStatus {
+  ACTIVE
+  DISABLED
+}
+
+model Company {
+  id        String        @id @default(cuid()) @db.VarChar(30)
+  name      String        @db.VarChar(100)
+  code      String        @unique @db.VarChar(50)
+  status    CompanyStatus @default(ACTIVE)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  departments Department[]
+  users       User[]
+
+  @@map("companies")
+}
+
+model Department {
+  id        String   @id @default(cuid()) @db.VarChar(30)
+  companyId String   @db.VarChar(30)
+  parentId  String?  @db.VarChar(30)
+  name      String   @db.VarChar(100)
+  code      String   @db.VarChar(50)
+  sort      Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company  Company      @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  parent   Department?  @relation("DepartmentTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children Department[] @relation("DepartmentTree")
+  users    User[]
+
+  @@unique([companyId, code])
+  @@index([companyId, parentId])
+  @@map("departments")
+}
+
+model User {
+  id           String     @id @default(cuid()) @db.VarChar(30)
+  companyId    String     @db.VarChar(30)
+  departmentId String?    @db.VarChar(30)
+  username     String     @unique @db.VarChar(50)
+  passwordHash String     @db.VarChar(255)
+  realName     String     @db.VarChar(50)
+  phone        String?    @db.VarChar(20)
+  email        String?    @db.VarChar(100)
+  status       UserStatus @default(ACTIVE)
+  lastLoginAt  DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  company    Company    @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  department Department? @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  userRoles  UserRole[]
+
+  @@index([companyId, departmentId])
+  @@index([companyId, status])
+  @@map("users")
+}
+
+model Role {
+  id          String   @id @default(cuid()) @db.VarChar(30)
+  name        String   @unique @db.VarChar(50)
+  code        String   @unique @db.VarChar(50)
+  description String?  @db.VarChar(255)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userRoles UserRole[]
+
+  @@map("roles")
+}
+
+model UserRole {
+  userId    String   @db.VarChar(30)
+  roleId    String   @db.VarChar(30)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@index([roleId])
+  @@map("user_roles")
 }
