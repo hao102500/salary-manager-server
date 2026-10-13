@@ -1,21 +1,25 @@
+
 import { Module } from '@nestjs/common';
-import { createObserveModule } from '@nestjs/observe';
+import { ConfigModule } from '@nestjs/config';
+
+import configuration from './config/configuration';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-
-export const { ObserveModule, ObserveInstrument } = createObserveModule();
+import { HealthModule } from './health/health.module';
+// PrismaModule
+import { PrismaModule } from './database/prisma/prisma.module';
 
 @Module({
   imports: [
-    // Distributed tracing, auto-correlated logs, request/job metrics, error
-    // telemetry, alarms, and more — out of the box. Sign up at https://observe.nestjs.com
-    ObserveModule.forRoot({
-      appKey: 'YOUR_APP_KEY',
-      appSecret: 'YOUR_APP_SECRET',
-      serviceId: 'salary-manager-server',
+    ConfigModule.forRoot({ // 读取 .env 环境变量
+      isGlobal: true, // 全局注册 ConfigModule，其他模块无需再导入
+      envFilePath: '.env', // 明确本地配置文件的位置
+      load: [configuration], // 加载统一配置
     }),
+    PrismaModule, // 数据库模块
+    HealthModule, // 健康检查模块
   ],
-  controllers: [AppController],
-  providers: [AppService],
+  controllers: [AppController], // 注册控制器
+  providers: [AppService], // 注册服务
 })
 export class AppModule {}
